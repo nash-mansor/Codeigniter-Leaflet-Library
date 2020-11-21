@@ -83,13 +83,14 @@ class Leaflet
 	var $customFunction		='';
 
 	var $markers 			= array();
+	var $geojsons			= array();
 
 
 	public function __construct(){
 	    $this->ci =& get_instance();
 	}
 
-	function leaflet($config = array()) {
+	function leafletc($config = array()) {
 		if (count($config) > 0) {
 			$this->initialize($config);
 		}
@@ -105,7 +106,162 @@ class Leaflet
 		}
 	}
 
-	function add_marker($params = array()) {
+function add_geojson($params = array()){	
+		$geojson = array();
+		$geojson['file']		= array();
+		$geojson['fillOpacity'] = '0.5';
+		$geojson['weight']		='0.5';
+		$geojson['opacity']		= '0.8';
+		$geojson['colour']		='#11f43e';
+		$geojson['colorOuter']	='#fffb2d';
+		$geojson['customcategory']	= TRUE;
+		$geojson['categories']	='';
+		$geojson['labeled']		=TRUE;
+
+		$geojson_output	= '';
+
+		foreach ($params as $key => $value){
+			if(isset($geojson[$key])){
+					$geojson[$key]=$value;
+				}
+		}
+					//create geojson
+		$geojson_output .='
+			var geoLayer_'.$geojson['file']['polygon'][0].';
+			var geoLayer_'.$geojson['file']['polyline'][0].';
+			var geoLayer_'.$geojson['file']['point'][0].';';
+
+			for($ilayer = 0 ; $ilayer <= 3; $ilayer++)
+			{ 
+				if($ilayer ==0)//polygon
+				{ 
+					if($geojson['file']['polygon'][0]!='')
+					{	
+						$geojson_output .='
+						var markers = L.markerClusterGroup({chunkedLoading : true});
+						var gft =  new L.FeatureGroup();
+						$.getJSON("/assets/geojson/'.$geojson['file']['polygon'][0].'.geojson", function(data){
+							geoLayer_'.$geojson['file']['polygon'][0].'= L.geoJson(data, {
+								style: function(feature) {';
+
+								if ($geojson['customcategory']==TRUE)
+								{$geojson_output .='
+									var ctg=feature.properties.kategori;
+									var fillColor='.json_encode($geojson['categories']).';
+									var cl,wg;
+									if(ctg ==1)
+									{
+										cl="'.$geojson['colorOuter'].'";
+										wg=5;
+									}else
+									{	
+										cl="#fffb2d";
+										
+										wg="'.$geojson['weight'].'";
+
+									}
+									';
+
+									$geojson_output .='
+
+									return {
+
+										fillOpacity	: '.$geojson['fillOpacity'].',
+										fillColor 	: fillColor[ctg-1],
+										weight 		:  wg,
+										opacity		: '.$geojson['opacity'].',
+										color 		: cl,
+										dashArray	: "30 8",
+										lineCap		: "square"
+									};';
+
+
+								} else {
+										$geojson_output .=' return {
+
+										fillOpacity	: '.$geojson['fillOpacity'].',
+										fillColor 	: "#11f43e",
+										weight 		:  '.$geojson['weight'].',
+										opacity		: '.$geojson['opacity'].',
+										color 		: "'.$geojson['color'].'"
+										};';	
+										
+									
+
+									}
+
+									$geojson_output .='},
+									onEachFeature: function(feature,layer) {	
+										var nm=feature.properties.nm_bidang;
+										var latt=parseFloat(feature.properties.latitude);
+										var longg=parseFloat(feature.properties.longitude);
+										';
+									
+									
+
+										if ($geojson['labeled']==TRUE)
+										{  
+											$geojson_output .='
+											
+
+											var ctg = feature.properties.kategori;
+											var vstyle;
+											if(ctg==1)
+											{vstyle="leaflet-label-kabupaten";}else
+											{vstyle="leaflet-label-kecamatan";}
+
+											var icon = L.divIcon({ 
+												className : vstyle,
+												html : "<b>"+feature.properties.nm_bidang+"</b>",
+												iconSize : [100,20]
+											});
+
+											gft.addLayer(L.marker([longg, latt], {icon: icon}).addTo(map));
+
+											markers.addLayer(L.marker([longg,latt],{icon: icon,kode:feature.properties.id }).on("click",function(e){layer.openPopup();}));
+
+											map.addLayer(markers);
+											';
+
+										}
+										
+										$geojson_output .='
+  	 	
+									}
+								}).addTo(map);
+								gft.addLayer(geoLayer_'.$geojson['file']['polygon'][0].');
+							}); 
+							';
+								
+								}
+								} else if($ilayer ==1)//polyline
+									{ if($geojson['file']['polyline'][0]!='')
+									{
+										
+										
+									}
+									} else
+									{ if($geojson['file']['point'][0]!='')
+									{
+										}
+
+									}	
+
+								
+						}
+
+							array_push($this->geojsons, $geojson_output);
+							
+								
+							
+					}
+
+
+	
+
+
+	function add_marker($params = array()) 
+	{
 
 		$marker = array();
 		//$this->markersInfo['marker_'.count($this->markers)] = array();
@@ -144,7 +300,8 @@ class Leaflet
 		$marker['className'] = "icon-marker";
 
 		$marker_output = '';
-		foreach ($params as $key => $value) {
+		foreach ($params as $key => $value) 
+		{
 			if (isset($marker[$key])) {
 				$marker[$key] = $value;
 			}
@@ -187,7 +344,8 @@ class Leaflet
 			}
 
 			// Custom Marker Icon
-			if ($marker['customicon']==TRUE) {
+			if ($marker['customicon']==TRUE) 
+			{
 				$marker_output .= 'icon: L.icon({';
 
 				$marker_output .= 'iconUrl: "'.$marker['iconUrl'].'",';
@@ -229,24 +387,33 @@ class Leaflet
 
 
 
-		if ($marker['popupContent'] != "") {
+		if ($marker['popupContent'] != "") 
+		{
 			$marker_output .= '.bindPopup("'.$marker['popupContent'].'")';
 		}
 		$marker_output .='.addTo(map);';
 
-		if ($marker['dragend'] != "") {
+		if ($marker['dragend'] != "") 
+		{
 			$marker_output .= 'marker.on("dragend", '.$marker['dragend'].');';
 		}
 
-		if ($marker['customFunction'] != "") {
+		if ($marker['customFunction'] != "") 
+		{
 			$marker_output .= $marker['customFunction'];
 		}
 
 		array_push($this->markers, $marker_output);
+		var_dump($marker_output);
 	}
 
+	
 
-	function create_map() {
+				
+
+
+	function create_map() 
+	{
 		$this->output_js = '';
 		$this->output_js_contents = '';
 		$this->output_html = '';
@@ -275,11 +442,13 @@ class Leaflet
 			}).addTo(map)
 			';
 
-		if ($this->customFunction !="") {
+		if ($this->customFunction !="") 
+		{
 			$this->output_js_contents .= $this->customFunction;
 		}
 
-		if ($this->click != "") {
+		if ($this->click != "") 
+		{
 			$this->output_js_contents .='
 			 '.$this->map_name.'.on("click",'.$this->click.');
 			';
@@ -290,9 +459,26 @@ class Leaflet
 		* Add marker.
 		* @uses add_marker
 		*/
-		if (count($this->markers)) {
-			foreach ($this->markers as $marker) {
+		if (count($this->markers)) 
+		{
+			foreach ($this->markers as $marker) 
+			{
 				$this->output_js_contents .= $marker;
+			}
+		}
+
+
+
+		/*
+		* nash add.
+		* nash try add
+		*/
+
+		if (count($this->geojsons)) 
+		{
+			foreach ($this->geojsons as $geojson) 
+			{
+				$this->output_js_contents .= $geojson;
 			}
 		}
 
@@ -303,7 +489,7 @@ class Leaflet
 		$this->output_js .= '</script>';
 
 		return array('js'=>$this->output_js, 'html'=>$this->output_html);
-
+		var_dump(output_js);
 
 	}
 
