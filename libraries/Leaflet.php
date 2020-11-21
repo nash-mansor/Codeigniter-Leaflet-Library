@@ -90,7 +90,7 @@ class Leaflet
 	    $this->ci =& get_instance();
 	}
 
-	function leafletc($config = array()) {
+	function leaflet($config = array()) {
 		if (count($config) > 0) {
 			$this->initialize($config);
 		}
